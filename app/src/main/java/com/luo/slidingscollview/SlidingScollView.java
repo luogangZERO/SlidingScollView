@@ -2,7 +2,7 @@ package com.luo.slidingscollview;
 
 /**
  * author：lg on 2021/1/27 15:28
- * desc: 横向手势滑动控件，子view有button需clickable="false"
+ * desc: 手势滑动控件，子view有button需clickable="false"
  */
 
 import android.content.Context;
@@ -27,6 +27,7 @@ public class SlidingScollView extends LinearLayout {
     private boolean mAlreadyMove;//是否已经手动滑动
     private int mScreenWidth;
     private int mScreenHeight;
+    private boolean isCrossSlip = false;//是否只横向手势滑动
 
     public SlidingScollView(Context context) {
         super(context);
@@ -80,9 +81,14 @@ public class SlidingScollView extends LinearLayout {
             //当手指在屏幕上滚动的时候触发这个方法
             @Override
             public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
-                if (e1.getX() < e2.getX()) {//向右滑动
+                if(isCrossSlip){
+                    if (e1.getX() < e2.getX()) {//向右滑动
+                        dispathEvent(e2);
+                    }
+                }else{
                     dispathEvent(e2);
                 }
+
                 return true;
             }
         });
@@ -107,13 +113,16 @@ public class SlidingScollView extends LinearLayout {
         if (mGestureDetector != null) {
             mGestureDetector.onTouchEvent(event);
         }
-        //拖动完成后恢复到原位，单击事件不执行
-        if (event.getAction() == MotionEvent.ACTION_UP) {
-            if (xLenght >= mTranslationLenght) {//位移400回调
-                clickActionUp.onClickActionUp();
+        if(isCrossSlip){
+            //横向拖动完成后恢复到原位，单击事件不执行
+            if (event.getAction() == MotionEvent.ACTION_UP) {
+                if (xLenght >= mTranslationLenght) {//横向位移400回调
+                    clickActionUp.onClickActionUp();
+                }
+                requestLayout();
             }
-            requestLayout();
         }
+
         return true;
     }
 
@@ -126,28 +135,34 @@ public class SlidingScollView extends LinearLayout {
                 int dy = (int) event.getRawY() - lastY;
                 xLenght = (int) event.getRawX() - firstX;
                 int l = this.getLeft() + dx;
-                int b = this.getBottom();
-//                int b = this.getBottom() + dy;//可上下滑动
                 int r = getRight() + dx;
-                int t = getTop();
-//                int t = getTop() + dy;//可上下滑动
-                //下面判断移动是否超出屏幕
-                /*if (l < 0) {
-                    l = 0;
-                    r = l + this.getWidth();
+                int b;
+                int t;
+                if (isCrossSlip) {
+                    b = this.getBottom();
+                    t = getTop();
+                } else {
+                    b = this.getBottom() + dy;//可上下滑动
+                    t = getTop() + dy;//可上下滑动
+                    //下面判断移动是否超出屏幕
+                    if (l < 0) {
+                        l = 0;
+                        r = l + this.getWidth();
+                    }
+                    if (t < 0) {
+                        t = 0;
+                        b = t + this.getHeight();
+                    }
+                    if (r > mScreenWidth) {
+                        r = mScreenWidth;
+                        l = r - this.getWidth();
+                    }
+                    if (b > mScreenHeight) {
+                        b = mScreenHeight;
+                        t = b - this.getHeight();
+                    }
                 }
-                if (t < 0) {
-                    t = 0;
-                    b = t + this.getHeight();
-                }
-               if (r > mScreenWidth) {
-                    r = mScreenWidth;
-                    l = r - this.getWidth();
-                }
-                if (b > mScreenHeight) {
-                    b = mScreenHeight;
-                    t = b - this.getHeight();
-                }*/
+
                 if (!mAlreadyMove) {//判断是否已经随手势滑动
                     if (Math.abs(dx) > 30 || Math.abs(dy) > 30) {
                         mAlreadyMove = true;
